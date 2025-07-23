@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UMak Schedule</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#FFCD00"> <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* UMak Colors */
+      --umak-yellow: #FFCD00;
+      --umak-blue: #002D72;
+      --umak-red: #D22B27; /* A complementary red for highlights/accents */
+      --text-dark: #333;
+      --text-light: #fdfdfd;
+      --background-light: #fdfdfd;
+      --card-background: #fff;
+      --shadow-light: rgba(0,0,0,0.08);
+      --border-radius-card: 12px;
+      --border-radius-item: 8px;
+
+      /* Logo specific sizes and protrusion amounts */
+      --logo-height-desktop: 100px; /* Actual height of the logo image */
+      --bar-height-desktop: 70px; /* Height of the visible blue bar */
+      --logo-protrusion-desktop: calc((var(--logo-height-desktop) - var(--bar-height-desktop)) / 2); /* How much it sticks out */
+
+      --logo-height-mobile: 80px; /* Actual height of the logo image on mobile */
+      --bar-height-mobile: 60px; /* Height of the visible blue bar on mobile */
+      --logo-protrusion-mobile: calc((var(--logo-height-mobile) - var(--bar-height-mobile)) / 2); /* How much it sticks out on mobile */
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--background-light);
+      margin: 0;
+      padding: 20px;
+      /* Adjust padding to clear the protruding logos */
+      padding-top: calc(var(--bar-height-desktop) + var(--logo-protrusion-desktop) + 10px);
+      padding-bottom: calc(var(--bar-height-desktop) + var(--logo-protrusion-desktop) + 10px);
+      color: var(--text-dark);
+      line-height: 1.6;
+      position: relative;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px; /* This controls distance from schedules */
+      color: var(--umak-blue);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      line-height: 1.2; /* To lessen the distance between lines within h1 */
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .day {
+      background: var(--card-background);
+      border-radius: var(--border-radius-card);
+      padding: 20px;
+      box-shadow: 0 6px 20px var(--shadow-light);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .day:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+
+    .day.current-day {
+      border: 3px solid var(--umak-yellow);
+      box-shadow: 0 8px 25px rgba(255, 205, 0, 0.3);
+      animation: pulseBorder 1.5s infinite alternate;
+    }
+
+    @keyframes pulseBorder {
+      from { border-color: var(--umak-yellow); }
+      to { border-color: var(--umak-blue); }
+    }
+
+    .day h2 {
+      font-size: 1.4rem;
+      border-left: 6px solid var(--umak-blue);
+      padding-left: 12px;
+      color: var(--umak-blue);
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .class {
+      margin: 10px 0;
+      padding: 12px 18px;
+      border-radius: var(--border-radius-item);
+      background-color: #f8fbff; /* Lighter blue tint */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 1px solid #e6f0f7;
+      transition: background-color 0.2s ease;
+      cursor: pointer; /* Indicate it's clickable for details */
+      position: relative;
+    }
+
+    .class:hover {
+      background-color: #edf5fc;
+    }
+
+    .class span {
+      display: block;
+    }
+
+    .subject {
+      font-weight: 600;
+      color: var(--umak-blue);
+      font-size: 1.05rem;
+    }
+
+    .time, .room {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .instructor {
+      font-size: 0.85em;
+      color: #888;
+      margin-top: 5px;
+      display: none; /* Hidden by default */
+    }
+
+    .class.expanded .instructor {
+      display: block;
+    }
+
+    .tag {
+      padding: 5px 10px;
+      font-size: 0.75em;
+      border-radius: 5px;
+      font-weight: 500;
+      margin-top: 5px;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* Dynamic Tag Colors */
+    .tag-geaa { background: #E0F7FA; color: #00796B; } /* Teal-ish */
+    .tag-gepc { background: #FFFDE7; color: #FBC02D; } /* Yellow-ish */
+    .tag-gests { background: #E8F5E9; color: #388E3C; } /* Green-ish */
+    .tag-acctg { background: #E3F2FD; color: #1976D2; } /* Blue-ish */
+    .tag-tqm { background: #FFEBEE; color: #D32F2F; } /* Red-ish */
+    .tag-pe { background: #F3E5F5; color: #8E24AA; } /* Purple-ish */
+    .tag-prof-ele { background: #FFF3E0; color: #F57C00; } /* Orange-ish */
+    .tag-eco { background: #ECEFF1; color: #607D8B; } /* Grey-ish */
+    .tag-herons { background: #FBE9E7; color: #E64A19; } /* Deep Orange-ish */
+    .tag-nstp { background: #E1F5FE; color: #0288D1; } /* Light Blue-ish */
+    .tag.no-class { background: #e0e0e0; color: #757575; } /* Grey for no class */
+
+    /* Fixed Navigation Bars (Top & Bottom) */
+    .fixed-nav-bar {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      height: var(--bar-height-desktop); /* Height of the visible blue bar */
+      background-color: var(--umak-blue);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center; /* Center the entire nav-content vertically within the bar */
+      z-index: 1000;
+    }
+
+    .fixed-nav-bar.top {
+      top: 0;
+    }
+
+    .fixed-nav-bar.bottom {
+      bottom: 0;
+    }
+
+    .nav-content {
+      display: flex;
+      justify-content: center; /* Horizontally center image */
+      align-items: center; /* Vertically center image */
+      width: 100%;
+      height: 100%; /* Take full height of the bar */
+      text-decoration: none;
+      position: relative; /* Allows for translateY positioning of logo */
+    }
+
+    .nav-logo {
+      height: var(--logo-height-desktop); /* Large logo size */
+      width: auto; /* Maintain aspect ratio */
+      display: block;
+      transition: transform 0.2s ease; /* Smooth hover effect */
+    }
+
+    .fixed-nav-bar.top .nav-logo {
+      /* Move logo down relative to its natural position within the bar */
+      transform: translateY(var(--logo-protrusion-desktop));
+    }
+
+    .fixed-nav-bar.bottom .nav-logo {
+      /* Move logo up relative to its natural position within the bar */
+      transform: translateY(calc(var(--logo-protrusion-desktop) * -1));
+    }
+
+    .nav-content:hover .nav-logo {
+      transform: scale(1.05) translateY(var(--logo-protrusion-desktop)); /* Scale and maintain protrusion for top */
+    }
+    .fixed-nav-bar.bottom .nav-content:hover .nav-logo {
+        transform: scale(1.05) translateY(calc(var(--logo-protrusion-desktop) * -1)); /* Scale and maintain protrusion for bottom */
+    }
+
+    /* Disclaimer Styles (Updated for details/summary) */
+    details.disclaimer {
+      background-color: #fff3cd; /* Light yellow background */
+      border: 1px solid #ffeeba; /* Slightly darker yellow border */
+      color: #856404; /* Dark yellow text */
+      padding: 10px 15px; /* Adjust padding for compact view */
+      margin: 20px auto; /* Center with auto margins and add vertical space */
+      border-radius: 8px;
+      max-width: 800px; /* Limit width for readability */
+      font-size: 0.9em;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer; /* Indicate the whole area is clickable */
+    }
+
+    details.disclaimer summary {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #856404; /* Match heading color to text color */
+      padding: 0; /* Remove default summary padding */
+      list-style: none; /* Remove default triangle icon */
+      display: flex; /* Allow custom icon if desired */
+      align-items: center;
+    }
+
+    details.disclaimer summary::before {
+      content: 'ℹ️'; /* Info icon */
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+
+    details.disclaimer[open] summary::before {
+      content: '⬇️'; /* Change icon when open */
+    }
+
+
+    details.disclaimer p {
+      margin-top: 10px; /* Space between summary and paragraph when open */
+      line-height: 1.5;
+    }
+
+
+    /* ---------- Mobile View Adjustment ---------- */
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+        padding-top: calc(var(--bar-height-mobile) + var(--logo-protrusion-mobile) + 10px);
+        padding-bottom: calc(var(--bar-height-mobile) + var(--logo-protrusion-mobile) + 10px);
+      }
+
+      h1 {
+        font-size: 1.8rem;
+        margin-bottom: 25px;
+      }
+
+      .container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .day {
+        padding: 15px;
+      }
+
+      .day h2 {
+        font-size: 1.3rem;
+        padding-left: 10px;
+      }
+
+      .class {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+        padding: 10px 15px;
+      }
+
+      .tag {
+        align-self: flex-end;
+        margin-top: 8px;
+        min-width: unset;
+      }
+
+      .fixed-nav-bar {
+        height: var(--bar-height-mobile); /* Smaller bar height on mobile */
+      }
+
+      .nav-logo {
+        height: var(--logo-height-mobile); /* Smaller logo on mobile */
+      }
+
+      .fixed-nav-bar.top .nav-logo {
+        transform: translateY(var(--logo-protrusion-mobile));
+      }
+
+      .fixed-nav-bar.bottom .nav-logo {
+        transform: translateY(calc(var(--logo-protrusion-mobile) * -1));
+      }
+      .nav-content:hover .nav-logo {
+        transform: scale(1.05) translateY(var(--logo-protrusion-mobile));
+      }
+      .fixed-nav-bar.bottom .nav-content:hover .nav-logo {
+          transform: scale(1.05) translateY(calc(var(--logo-protrusion-mobile) * -1));
+      }
+
+      details.disclaimer {
+        margin: 15px auto;
+        padding: 8px 10px; /* Even smaller padding on mobile */
+      }
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+        padding: 0;
+        margin: 0;
+        font-size: 12pt;
+      }
+
+      h1 {
+        color: #000;
+        margin-bottom: 20px;
+      }
+
+      .container {
+        display: block;
+        gap: 0;
+      }
+
+      .day {
+        box-shadow: none;
+        border: 1px solid #eee;
+        margin-bottom: 15px;
+        page-break-inside: avoid;
+        padding: 10px;
+      }
+
+      .day.current-day {
+        border-color: #ccc;
+        animation: none;
+      }
+
+      .day h2 {
+        border-left-color: #000;
+        color: #000;
+        font-size: 1.2em;
+        margin-bottom: 10px;
+      }
+
+      .class {
+        background-color: #fff;
+        border: 1px dashed #ccc;
+        padding: 8px 12px;
+        margin: 8px 0;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        page-break-inside: avoid;
+      }
+
+      .subject {
+        color: #000;
+        font-weight: bold;
+      }
+
+      .time, .room, .instructor {
+        color: #555;
+        font-size: 0.85em;
+      }
+
+      .tag {
+        background: #eee;
+        color: #333;
+        border: 1px solid #ccc;
+        font-size: 0.7em;
+        padding: 2px 5px;
+        margin-top: 0;
+      }
+
+      .instructor {
+        display: block !important;
+      }
+
+      .fixed-nav-bar,
+      script,
+      details.disclaimer { /* Hide disclaimer for print, including the details tag */
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="fixed-nav-bar top">
+    <a href="#" class="nav-content" aria-label="Scroll to Top">
+      <img src="umak-logo-top.png" alt="UMak Logo" class="nav-logo">
+    </a>
+  </div>
+
+  <div class="fixed-nav-bar bottom">
+    <a href="#current-day-anchor" class="nav-content" aria-label="Go to Current Day">
+      <img src="umak-logo-bottom.png" alt="Current Day Logo" class="nav-logo">
+    </a>
+  </div>
+
+  <details class="disclaimer">
+    <summary>Disclaimer</summary>
+    <p>This unofficial application/website is independently run and not affiliated with or endorsed by the Institute of Accountancy or the University of Makati. While intended to be helpful, the accuracy of its data cannot be guaranteed.</p>
+  </details>
+  <hr> <h1>Freshmen Schedule<br>IOA-BSA-1<br>1st Semester<br>A.Y. 2025–2026</h1>
+  <div class="container">
+
+    <div class="day" id="monday">
+      <h2>Monday</h2>
+      <div class="class" data-details="Prof. Maria Garcia">
+        <div>
+          <span class="subject">Art Appreciation</span>
+          <span class="time">09:00 AM – 10:30 AM</span>
+          <span class="room">HPSB 1013</span>
+          <span class="instructor">Instructor: Prof. Maria Garcia</span>
+        </div>
+        <span class="tag tag-geaa">GEAA</span>
+      </div>
+      <div class="class" data-details="Prof. Juan Dela Cruz">
+        <div>
+          <span class="subject">Purposive Communication</span>
+          <span class="time">10:30 AM – 12:00 PM</span>
+          <span class="room">HPSB 1014</span>
+          <span class="instructor">Instructor: Prof. Juan Dela Cruz</span>
+        </div>
+        <span class="tag tag-gepc">GEPC</span>
+      </div>
+      <div class="class" data-details="Dr. Emily Santos">
+        <div>
+          <span class="subject">Science, Tech & Society</span>
+          <span class="time">01:30 PM – 03:00 PM</span>
+          <span class="room">HPSB 1015</span>
+          <span class="instructor">Instructor: Dr. Emily Santos</span>
+        </div>
+        <span class="tag tag-gests">GESTS</span>
+      </div>
+    </div>
+
+    <div class="day" id="tuesday">
+      <h2>Tuesday</h2>
+      <div class="class" data-details="Mr. Robert Lim">
+        <div>
+          <span class="subject">Financial Accounting 1</span>
+          <span class="time">09:00 AM – 12:00 PM</span>
+          <span class="room">HPSB 1011</span>
+          <span class="instructor">Instructor: Mr. Robert Lim</span>
+        </div>
+        <span class="tag tag-acctg">ACCTG 1</span>
+      </div>
+      <div class="class" data-details="Ms. Sarah Reyes">
+        <div>
+          <span class="subject">Operation Mgt & TQM</span>
+          <span class="time">03:00 PM – 04:30 PM</span>
+          <span class="room">HPSB 1014</span>
+          <span class="instructor">Instructor: Ms. Sarah Reyes</span>
+        </div>
+        <span class="tag tag-tqm">TQM</span>
+      </div>
+    </div>
+
+    <div class="day" id="wednesday">
+      <h2>Wednesday</h2>
+      <div class="class no-class">
+        <div>
+          <span class="subject">No Classes Scheduled</span>
+          <span class="time">Enjoy your break!</span>
+          <span class="room">N/A</span>
+        </div>
+        <span class="tag no-class">Free Day</span>
+      </div>
+    </div>
+
+    <div class="day" id="thursday">
+      <h2>Thursday</h2>
+      <div class="class" data-details="Prof. Maria Garcia">
+        <div>
+          <span class="subject">Art Appreciation</span>
+          <span class="time">09:00 AM – 10:30 AM</span>
+          <span class="room">HPSB 1013</span>
+          <span class="instructor">Instructor: Prof. Maria Garcia</span>
+        </div>
+        <span class="tag tag-geaa">GEAA</span>
+      </div>
+      <div class="class" data-details="Prof. Juan Dela Cruz">
+        <div>
+          <span class="subject">Purposive Communication</span>
+          <span class="time">10:30 AM – 12:00 PM</span>
+          <span class="room">HPSB 1014</span>
+          <span class="instructor">Instructor: Prof. Juan Dela Cruz</span>
+        </div>
+        <span class="tag tag-gepc">GEPC</span>
+      </div>
+      <div class="class" data-details="Dr. Emily Santos">
+        <div>
+          <span class="subject">Science, Tech & Society</span>
+          <span class="time">01:30 PM – 03:00 PM</span>
+          <span class="room">HPSB 1015</span>
+          <span class="instructor">Instructor: Dr. Emily Santos</span>
+        </div>
+        <span class="tag tag-gests">GESTS</span>
+      </div>
+      <div class="class" data-details="Coach Benjie Torres">
+        <div>
+          <span class="subject">PE 1 – PATHFIT</span>
+          <span class="time">03:00 PM – 05:00 PM</span>
+          <span class="room">Oval Track B</span>
+          <span class="instructor">Instructor: Coach Benjie Torres</span>
+        </div>
+        <span class="tag tag-pe">PE 1</span>
+      </div>
+      <div class="class" data-details="Dr. Alex Castro">
+        <div>
+          <span class="subject">Professional Elective 1</span>
+        <span class="time">06:00 PM – 09:00 PM</span>
+          <span class="room">HPSB 201</span>
+          <span class="instructor">Instructor: Dr. Alex Castro</span>
+        </div>
+        <span class="tag tag-prof-ele">PROF ELE</span>
+      </div>
+    </div>
+
+    <div class="day" id="friday">
+      <h2>Friday</h2>
+      <div class="class" data-details="Dr. Sofia Dela Rosa">
+        <div>
+          <span class="subject">ECO 2 – Economic Dev</span>
+          <span class="time">01:30 PM – 03:00 PM</span>
+          <span class="room">HPSB 1014</span>
+          <span class="instructor">Instructor: Dr. Sofia Dela Rosa</span>
+        </div>
+        <span class="tag tag-eco">ECO 2</span>
+      </div>
+      <div class="class" data-details="Ms. Sarah Reyes">
+        <div>
+          <span class="subject">Operation Mgt & TQM</span>
+          <span class="time">03:00 PM – 04:30 PM</span>
+          <span class="room">HPSB 1014</span>
+          <span class="instructor">Instructor: Ms. Sarah Reyes</span>
+        </div>
+        <span class="tag tag-tqm">TQM</span>
+      </div>
+      <div class="class" data-details="Prof. Carlos Mendoza">
+        <div>
+          <span class="subject">Heritage Studies 1</span>
+          <span class="time">10:30 AM – 12:00 PM</span>
+          <span class="room">HPSB 1010</span>
+          <span class="instructor">Instructor: Prof. Carlos Mendoza</span>
+        </div>
+        <span class="tag tag-herons">HERONS</span>
+      </div>
+      <div class="class" data-details="Coach Benjie Torres">
+        <div>
+          <span class="subject">PE 1 – PATHFIT</span>
+          <span class="time">03:00 PM – 05:00 PM</span>
+          <span class="room">Oval Track B</span>
+          <span class="instructor">Instructor: Coach Benjie Torres</span>
+        </div>
+        <span class="tag tag-pe">PE 1</span>
+      </div>
+    </div>
+
+    <div class="day" id="saturday">
+      <h2>Saturday</h2>
+      <div class="class" data-details="Mr. David Cruz">
+        <div>
+          <span class="subject">CWTS 1</span>
+          <span class="time">01:30 PM – 04:30 PM</span>
+          <span class="room">B3 304</span>
+          <span class="instructor">Instructor: Mr. David Cruz</span>
+        </div>
+        <span class="tag tag-nstp">NSTP</span>
+      </div>
+    </div>
+
+    <div class="day" id="sunday">
+      <h2>Sunday</h2>
+      <div class="class no-class">
+        <div>
+          <span class="subject">No Classes Scheduled</span>
+          <span class="time">Rest Day!</span>
+          <span class="room">N/A</span>
+        </div>
+        <span class="tag no-class">Weekend</span>
+      </div>
+    </div>
+
+  </div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker registered!', reg))
+        .catch(err => console.error('Service Worker failed:', err));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Highlight Current Day
+      const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const today = new Date();
+      // For demonstration, setting to Wednesday
+      const currentDayIndex = 3;
+      // const currentDayIndex = today.getDay(); // Use this line for live functionality
+
+      const currentDayId = daysOfWeek[currentDayIndex];
+      const currentDayElement = document.getElementById(currentDayId);
+
+      if (currentDayElement) {
+        currentDayElement.classList.add('current-day');
+        // Add an anchor target for the "Go to Today" button
+        const anchor = document.createElement('a');
+        anchor.id = 'current-day-anchor';
+        anchor.style.visibility = 'hidden'; // Hide the anchor itself
+        anchor.style.position = 'absolute';
+        anchor.style.top = '0';
+        currentDayElement.prepend(anchor); // Place anchor at the top of the current day block
+      }
+
+      // Toggle for Details (Instructor Name)
+      document.querySelectorAll('.class').forEach(classBlock => {
+        classBlock.addEventListener('click', () => {
+          // Do not toggle for 'No Classes Scheduled' blocks
+          if (!classBlock.classList.contains('no-class')) {
+            classBlock.classList.toggle('expanded');
+          }
+        });
+      });
+
+      // Fixed navigation bar scroll behavior
+      const scrollToTopLink = document.querySelector('.fixed-nav-bar.top .nav-content');
+      const goToTodayLink = document.querySelector('.fixed-nav-bar.bottom .nav-content');
+
+      scrollToTopLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      goToTodayLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currentDayAnchor = document.getElementById('current-day-anchor');
+        if (currentDayAnchor) {
+          // Get the actual height of the top bar and its logo's protrusion
+          const barHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-height-desktop'));
+          const logoProtrusion = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--logo-protrusion-desktop'));
+          // Account for the height of the collapsed disclaimer when calculating scroll offset
+          const disclaimerHeight = document.querySelector('details.disclaimer').offsetHeight;
+          const headerOffset = barHeight + logoProtrusion + 10 + disclaimerHeight; // Match body padding-top + disclaimer height
+
+          const elementPosition = currentDayAnchor.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
