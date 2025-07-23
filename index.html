@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UMak Schedule</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#FFCD00">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* UMak Colors */
+      --umak-yellow: #FFCD00;
+      --umak-blue: #002D72;
+      --umak-red: #D22B27; /* A complementary red for highlights/accents */
+      --text-dark: #333;
+      --text-light: #fdfdfd;
+      --background-light: #fdfdfd;
+      --card-background: #fff;
+      --shadow-light: rgba(0,0,0,0.08);
+      --border-radius-card: 12px;
+      --border-radius-item: 8px;
+
+      /* Logo specific sizes and protrusion amounts */
+      --logo-height-desktop: 100px;
+      --bar-height-desktop: 50px;
+      --logo-protrusion-desktop: calc((var(--logo-height-desktop) - var(--bar-height-desktop)) / 2);
+
+      --logo-height-mobile: 80px;
+      --bar-height-mobile: 40px;
+      --logo-protrusion-mobile: calc((var(--logo-height-mobile) - var(--bar-height-mobile)) / 2);
+
+      /* Global transitions */
+      --transition-speed-fast: 0.2s;
+      --transition-speed-normal: 0.3s;
+      --transition-speed-slow: 0.4s;
+      --transition-ease: ease-in-out;
+    }
+
+    /* Scroll progress bar */
+    #progressBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 6px; /* Thinner progress bar */
+      background: linear-gradient(to right, var(--umak-yellow), var(--umak-red));
+      z-index: 1001; /* Above everything else */
+      transition: width var(--transition-speed-fast) linear; /* Smoother update */
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      /* Background Image & Overlay */
+      background: var(--background-light); /* Fallback solid color */
+      background-image: url('site_background.png'), radial-gradient(circle at top left, rgba(0, 45, 114, 0.05) 1px, transparent 1px),
+                        radial-gradient(circle at bottom right, rgba(255, 205, 0, 0.05) 1px, transparent 1px);
+      background-blend-mode: overlay, normal, normal; /* Blend the image with the radial gradients */
+      background-size: cover, 20px 20px, 20px 20px; /* Cover the whole background, keep dot pattern size */
+      background-attachment: fixed; /* Makes the background fixed while content scrolls */
+
+      margin: 0;
+      padding: 20px;
+      padding-top: calc(var(--bar-height-desktop) + var(--logo-protrusion-desktop) + 10px + 6px); /* Added space for progress bar */
+      padding-bottom: calc(var(--bar-height-desktop) + var(--logo-protrusion-desktop) + 10px);
+      color: var(--text-dark);
+      line-height: 1.6;
+      position: relative;
+    }
+
+    /* Add a semi-transparent overlay on the content area to make text readable */
+    .container, .compact-table-container, .disclaimer {
+        background-color: rgba(255, 255, 255, 0.9); /* White with 90% opacity */
+        position: relative; /* Needed for z-index if applying more effects */
+        z-index: 1; /* Place above the body's background */
+        box-shadow: 0 6px 20px var(--shadow-light); /* Apply shadow directly here for consistency */
+        border-radius: var(--border-radius-card); /* Apply border-radius here for consistency */
+        overflow: hidden; /* Ensures content stays within rounded corners */
+    }
+
+    /* Adjust margins for content containers */
+    .container, .compact-table-container {
+        margin: 20px auto;
+        max-width: 1200px;
+    }
+
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--umak-blue);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr; /* Default to one column */
+      gap: 20px;
+      /* Remove max-width and margin here as it's now on .container directly */
+      transition: opacity var(--transition-speed-normal) var(--transition-ease); /* For hiding/showing */
+    }
+
+    /* Styles for the daily schedule dropdowns */
+    details.day {
+      background: var(--card-background); /* Keep for internal content background */
+      /* box-shadow and border-radius are now on .container */
+      display: flex;
+      flex-direction: column;
+      transition: transform var(--transition-speed-normal) var(--transition-ease),
+                  box-shadow var(--transition-speed-normal) var(--transition-ease),
+                  border var(--transition-speed-normal) var(--transition-ease);
+      cursor: pointer;
+      overflow: hidden;
+      border: 1px solid transparent; /* Keep for current day highlight */
+      position: relative;
+    }
+
+    details.day:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+
+    details.day.current-day {
+      border: 3px solid var(--umak-yellow);
+      box-shadow: 0 8px 25px rgba(255, 205, 0, 0.4);
+      animation: pulseBorder 1.5s infinite alternate;
+    }
+
+    @keyframes pulseBorder {
+      from { border-color: var(--umak-yellow); }
+      to { border-color: var(--umak-blue); }
+    }
+
+    details.day summary {
+      font-size: 1.4rem;
+      border-left: 6px solid var(--umak-blue);
+      padding: 20px;
+      color: var(--umak-blue);
+      font-weight: 600;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(to right, #f8fbff, var(--card-background));
+      transition: background-color var(--transition-speed-fast) var(--transition-ease), border-bottom var(--transition-speed-normal) var(--transition-ease);
+      position: relative;
+      z-index: 1;
+    }
+
+    details.day summary:hover {
+        background-color: #eaf4ff; /* Slight hover effect on summary */
+    }
+
+    details.day[open] summary {
+        background: linear-gradient(to right, #eaf4ff, #f0f8ff);
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    details.day summary::-webkit-details-marker {
+      display: none;
+    }
+    details.day summary::marker {
+      display: none;
+    }
+
+    details.day summary::after {
+      content: '▼'; /* Down arrow for closed, will rotate */
+      font-size: 1.5em;
+      color: var(--umak-blue);
+      margin-left: 10px;
+      transition: transform var(--transition-speed-normal) var(--transition-ease); /* Smooth rotation */
+      font-family: 'Times New Roman', serif;
+      line-height: 1;
+      transform: rotate(-90deg); /* Initial state: pointing right */
+    }
+
+    details.day[open] summary::after {
+      transform: rotate(0deg); /* When open: pointing down */
+    }
+
+    /* Content wrapper for smooth transition */
+    .schedule-content {
+      padding: 0 20px 20px 20px;
+      display: grid;
+      grid-template-rows: 0fr; /* Start with 0 height */
+      opacity: 0;
+      visibility: hidden;
+      transition: grid-template-rows var(--transition-speed-slow) var(--transition-ease),
+                  opacity var(--transition-speed-normal) var(--transition-ease) 0.1s,
+                  visibility var(--transition-speed-slow) var(--transition-ease);
+    }
+
+    details.day[open] .schedule-content {
+      grid-template-rows: 1fr; /* Expand to content height */
+      opacity: 1;
+      visibility: visible;
+      transition: grid-template-rows var(--transition-speed-slow) var(--transition-ease),
+                  opacity var(--transition-speed-normal) var(--transition-ease) 0.2s,
+                  visibility var(--transition-speed-slow) var(--transition-ease);
+    }
+
+    .schedule-content > div {
+      overflow: hidden; /* Ensures content stays within the grid row */
+      min-height: 0; /* Important for grid-template-rows to collapse properly */
+    }
+
+    .class {
+      margin: 10px 0;
+      padding: 12px 18px;
+      border-radius: var(--border-radius-item);
+      background-color: #f8fbff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 1px solid #e6f0f7;
+      transition: background-color var(--transition-speed-fast) var(--transition-ease),
+                  transform var(--transition-speed-fast) var(--transition-ease),
+                  box-shadow var(--transition-speed-fast) var(--transition-ease);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden; /* For inner elements */
+    }
+
+    .class:hover {
+      background-color: #edf5fc;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .class span {
+      display: block;
+    }
+
+    .subject {
+      font-weight: 600;
+      color: var(--umak-blue);
+      font-size: 1.05rem;
+    }
+
+    .time, .room {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .instructor {
+      font-size: 0.85em;
+      color: #888;
+      margin-top: 5px;
+      max-height: 0; /* Initial hidden state */
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height var(--transition-speed-normal) var(--transition-ease), opacity var(--transition-speed-normal) var(--transition-ease);
+    }
+
+    .class.expanded .instructor {
+      max-height: 50px; /* A height larger than content to ensure it shows */
+      opacity: 1;
+    }
+
+    .tag {
+      padding: 5px 10px;
+      font-size: 0.75em;
+      border-radius: 5px;
+      font-weight: 500;
+      margin-top: 5px;
+      min-width: 60px;
+      text-align: center;
+      white-space: nowrap; /* Prevent tag text from wrapping */
+    }
+
+    /* Dynamic Tag Colors */
+    .tag-geaa { background: #E0F7FA; color: #00796B; }
+    .tag-gepc { background: #FFFDE7; color: #FBC02D; }
+    .tag-gests { background: #E8F5E9; color: #388E3C; }
+    .tag-acctg { background: #E3F2FD; color: #1976D2; }
+    .tag-tqm { background: #FFEBEE; color: #D32F2F; }
+    .tag-pe { background: #F3E5F5; color: #8E24AA; }
+    .tag-prof-ele { background: #FFF3E0; color: #F57C00; }
+    .tag-eco { background: #ECEFF1; color: #607D8B; }
+    .tag-herons { background: #FBE9E7; color: #E64A19; }
+    .tag-nstp { background: #E1F5FE; color: #0288D1; }
+    .tag.no-class { background: #e0e0e0; color: #757575; }
+
+    /* Fixed Navigation Bars (Top & Bottom) */
+    .fixed-nav-bar {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      height: var(--bar-height-desktop);
+      background-color: var(--umak-blue);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .fixed-nav-bar.top {
+      top: 0;
+    }
+
+    .fixed-nav-bar.bottom {
+      bottom: 0;
+      justify-content: space-around; /* Space for logo and toggle */
+    }
+
+    .nav-content {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      text-decoration: none;
+      position: relative;
+    }
+
+    .nav-logo {
+      height: var(--logo-height-desktop);
+      width: auto;
+      display: block;
+      transition: transform var(--transition-speed-fast) var(--transition-ease);
+    }
+
+    .fixed-nav-bar.top .nav-logo {
+      transform: translateY(var(--logo-protrusion-desktop));
+    }
+
+    .fixed-nav-bar.bottom .nav-logo {
+      transform: translateY(calc(var(--logo-protrusion-desktop) * -1));
+    }
+
+    .nav-content:hover .nav-logo {
+      transform: scale(1.05) translateY(var(--logo-protrusion-desktop));
+    }
+    .fixed-nav-bar.bottom .nav-content:hover .nav-logo {
+        transform: scale(1.05) translateY(calc(var(--logo-protrusion-desktop) * -1));
+    }
+
+    .layout-toggle-btn {
+        background-color: var(--umak-yellow);
+        color: var(--umak-blue);
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-weight: 500;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background-color var(--transition-speed-fast) var(--transition-ease),
+                    transform var(--transition-speed-fast) var(--transition-ease),
+                    box-shadow var(--transition-speed-fast) var(--transition-ease);
+        position: absolute; /* Position within the bottom bar */
+        right: 20px;
+        bottom: 5px; /* Adjust to sit well with the logo */
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .layout-toggle-btn:hover {
+        background-color: #e0b000; /* A slightly darker yellow */
+        transform: translateY(-2px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    }
+
+    .layout-toggle-btn svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor; /* Inherit color from text */
+    }
+
+    /* Disclaimer Styles */
+    details.disclaimer {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 10px 15px;
+      margin: 20px auto;
+      border-radius: 8px;
+      max-width: 800px;
+      font-size: 0.9em;
+      /* box-shadow and border-radius are now on .disclaimer directly, no need here */
+      cursor: pointer;
+    }
+
+    details.disclaimer summary {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #856404;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      align-items: center;
+    }
+
+    details.disclaimer summary::before {
+      content: 'ℹ️';
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+
+    details.disclaimer[open] summary::before {
+      content: '⬇️';
+    }
+
+    details.disclaimer p {
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    /* Compact Table Styles */
+    .compact-table-container {
+        /* max-width and margin are now on .compact-table-container directly */
+        overflow-x: auto; /* Enable horizontal scrolling on small screens */
+        display: none; /* Hidden by default */
+        opacity: 0;
+        transition: opacity var(--transition-speed-normal) var(--transition-ease);
+    }
+
+    body.compact-view .compact-table-container {
+        display: block; /* Show when in compact view */
+        opacity: 1;
+    }
+
+    .compact-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+        min-width: 700px; /* Ensure table is wide enough for content */
+        background-color: var(--card-background); /* Ensure table background is white */
+        border-radius: var(--border-radius-card); /* Inherit from container */
+        overflow: hidden; /* For rounded corners */
+    }
+
+    .compact-table th,
+    .compact-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .compact-table th {
+        background-color: var(--umak-blue);
+        color: var(--text-light);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky; /* Make headers sticky for horizontal scroll */
+        top: 0;
+    }
+
+    .compact-table tbody tr:hover {
+        background-color: #f8fbff;
+    }
+
+    .compact-table .table-day {
+        font-weight: 700;
+        color: var(--umak-blue);
+        white-space: nowrap; /* Prevent day names from wrapping */
+    }
+
+    .compact-table .table-subject {
+        font-weight: 500;
+    }
+
+    .compact-table .table-tag {
+        font-size: 0.7em;
+        padding: 3px 8px;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+
+    .compact-table .no-class-row td {
+        background-color: #f5f5f5;
+        color: #757575;
+        font-style: italic;
+        text-align: center;
+    }
+    .compact-table .no-class-row .table-tag {
+        background: #e0e0e0;
+        color: #757575;
+    }
+
+    /* Horizontal rows for days in compact view */
+    .compact-table tbody tr td {
+        border-top: none; /* Reset default top border */
+    }
+
+    .compact-table tbody tr.first-class-of-day td {
+        border-top: 2px solid #ddd; /* A distinct border for the start of each day */
+    }
+
+    .compact-table tbody tr.first-class-of-day.no-class-row td {
+        border-top: 2px solid #ccc; /* Slightly different for no-class rows */
+    }
+
+    /* ---------- Mobile View Adjustment ---------- */
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+        padding-top: calc(var(--bar-height-mobile) + var(--logo-protrusion-mobile) + 10px + 6px); /* Progress bar space */
+        padding-bottom: calc(var(--bar-height-mobile) + var(--logo-protrusion-mobile) + 10px);
+      }
+
+      h1 {
+        font-size: 1.8rem;
+        margin-bottom: 25px;
+      }
+
+      .container {
+        grid-template-columns: 1fr; /* Force single column on mobile */
+        gap: 15px;
+      }
+
+      details.day summary {
+        font-size: 1.3rem;
+        padding: 15px;
+        border-left: 5px solid var(--umak-blue);
+      }
+      .schedule-content {
+        padding: 0 15px 15px 15px;
+      }
+
+      .class {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+        padding: 10px 15px;
+      }
+
+      .tag {
+        align-self: flex-end;
+        margin-top: 8px;
+        min-width: unset;
+      }
+
+      .fixed-nav-bar {
+        height: var(--bar-height-mobile);
+      }
+
+      .nav-logo {
+        height: var(--logo-height-mobile);
+      }
+
+      .fixed-nav-bar.top .nav-logo {
+        transform: translateY(var(--logo-protrusion-mobile));
+      }
+
+      .fixed-nav-bar.bottom .nav-logo {
+        transform: translateY(calc(var(--logo-protrusion-mobile) * -1));
+      }
+      .nav-content:hover .nav-logo {
+        transform: scale(1.05) translateY(var(--logo-protrusion-mobile));
+      }
+      .fixed-nav-bar.bottom .nav-content:hover .nav-logo {
+          transform: scale(1.05) translateY(calc(var(--logo-protrusion-mobile) * -1));
+      }
+
+      .layout-toggle-btn {
+          right: 15px;
+          bottom: 2px; /* Adjust for mobile */
+          padding: 6px 10px;
+          font-size: 0.8em;
+      }
+
+      details.disclaimer {
+        margin: 15px auto;
+        padding: 8px 10px;
+      }
+
+      .compact-table {
+          min-width: 500px; /* Adjust for smaller mobile width */
+      }
+      .compact-table th, .compact-table td {
+          padding: 8px 10px; /* Smaller padding for mobile table */
+      }
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+        padding: 0;
+        margin: 0;
+        font-size: 12pt;
+        background-image: none; /* No background pattern on print */
+      }
+
+      h1 {
+        color: #000;
+        margin-bottom: 20px;
+      }
+
+      .container {
+        display: none; /* Hide standard view when printing */
+      }
+
+      .compact-table-container {
+        display: block !important; /* Always show compact table for print */
+        box-shadow: none;
+        border-radius: 0;
+        margin: 0;
+        opacity: 1 !important;
+      }
+
+      .compact-table {
+        min-width: auto;
+      }
+
+      .compact-table th, .compact-table td {
+        border-color: #ccc;
+        padding: 10px;
+      }
+
+      .compact-table th {
+        background-color: #eee;
+        color: #000;
+      }
+
+      .compact-table .table-day {
+        color: #000;
+      }
+
+      .fixed-nav-bar,
+      script,
+      details.disclaimer,
+      #progressBar,
+      .layout-toggle-btn {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="progressBar"></div>
+
+  <div class="fixed-nav-bar top">
+    <a href="#" class="nav-content" aria-label="Scroll to Top">
+      <img src="umak-logo-top.png" alt="UMak Logo" class="nav-logo">
+    </a>
+  </div>
+
+  <div class="fixed-nav-bar bottom">
+    <a href="#current-day-anchor" class="nav-content" aria-label="Go to Current Day">
+      <img src="umak-logo-bottom.png" alt="Current Day Logo" class="nav-logo">
+    </a>
+    <button id="layoutToggle" class="layout-toggle-btn" aria-label="Toggle Layout View">
+        <svg viewBox="0 0 24 24">
+            <path d="M2 13h20v-2H2v2zm0 4h20v-2H2v2zm0-8h20V7H2v2zm0-4h20V3H2v2z"/>
+        </svg>
+        <span class="button-text">Compact View</span>
+    </button>
+  </div>
+
+  <details class="disclaimer">
+    <summary>Disclaimer</summary>
+    <p>This unofficial application/website is independently run and not affiliated with or endorsed by the Institute of Accountancy or the University of Makati. While intended to be helpful, the accuracy of its data cannot be guaranteed.</p>
+  </details>
+  <hr>
+
+  <h1>Freshmen Schedule<br>IOA-BSA-1<br>1st Semester<br>A.Y. 2025–2026</h1>
+
+  <div class="container" id="expanded-view-container">
+    </div>
+
+  <div class="compact-table-container" id="compact-view-container">
+    </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker registered!', reg))
+        .catch(err => console.error('Service Worker failed:', err));
+    }
+
+    const scheduleData = {
+      "monday": [
+        { subject: "Art Appreciation", time: "09:00 AM – 10:30 AM", room: "HPSB 1013", instructor: "Prof. Maria Garcia", tag: "GEAA", tagClass: "tag-geaa" },
+        { subject: "Purposive Communication", time: "10:30 AM – 12:00 PM", room: "HPSB 1014", instructor: "Prof. Juan Dela Cruz", tag: "GEPC", tagClass: "tag-gepc" },
+        { subject: "Science, Tech & Society", time: "01:30 PM – 03:00 PM", room: "HPSB 1015", instructor: "Dr. Emily Santos", tag: "GESTS", tagClass: "tag-gests" }
+      ],
+      "tuesday": [
+        { subject: "Financial Accounting 1", time: "09:00 AM – 12:00 PM", room: "HPSB 1011", instructor: "Mr. Robert Lim", tag: "ACCTG 1", tagClass: "tag-acctg" },
+        { subject: "Operation Mgt & TQM", time: "03:00 PM – 04:30 PM", room: "HPSB 1014", instructor: "Ms. Sarah Reyes", tag: "TQM", tagClass: "tag-tqm" }
+      ],
+      "wednesday": [
+        { subject: "No Classes Scheduled", time: "Enjoy your break!", room: "N/A", instructor: "", tag: "Free Day", tagClass: "no-class" }
+      ],
+      "thursday": [
+        { subject: "Art Appreciation", time: "09:00 AM – 10:30 AM", room: "HPSB 1013", instructor: "Prof. Maria Garcia", tag: "GEAA", tagClass: "tag-geaa" },
+        { subject: "Purposive Communication", time: "10:30 AM – 12:00 PM", room: "HPSB 1014", instructor: "Prof. Juan Dela Cruz", tag: "GEPC", tagClass: "tag-gepc" },
+        { subject: "Science, Tech & Society", time: "01:30 PM – 03:00 PM", room: "HPSB 1015", instructor: "Dr. Emily Santos", tag: "GESTS", tagClass: "tag-gests" },
+        { subject: "PE 1 – PATHFIT", time: "03:00 PM – 05:00 PM", room: "Oval Track B", instructor: "Coach Benjie Torres", tag: "PE 1", tagClass: "tag-pe" },
+        { subject: "Professional Elective 1", time: "06:00 PM – 09:00 PM", room: "HPSB 201", instructor: "Dr. Alex Castro", tag: "PROF ELE", tagClass: "tag-prof-ele" }
+      ],
+      "friday": [
+        { subject: "ECO 2 – Economic Dev", time: "01:30 PM – 03:00 PM", room: "HPSB 1014", instructor: "Dr. Sofia Dela Rosa", tag: "ECO 2", tagClass: "tag-eco" },
+        { subject: "Operation Mgt & TQM", time: "03:00 PM – 04:30 PM", room: "HPSB 1014", instructor: "Ms. Sarah Reyes", tag: "TQM", tagClass: "tag-tqm" },
+        { subject: "Heritage Studies 1", time: "10:30 AM – 12:00 PM", room: "HPSB 1010", instructor: "Prof. Carlos Mendoza", tag: "HERONS", tagClass: "tag-herons" },
+        { subject: "PE 1 – PATHFIT", time: "03:00 PM – 05:00 PM", room: "Oval Track B", instructor: "Coach Benjie Torres", tag: "PE 1", tagClass: "tag-pe" }
+      ],
+      "saturday": [
+        { subject: "CWTS 1", time: "01:30 PM – 04:30 PM", room: "B3 304", instructor: "Mr. David Cruz", tag: "NSTP", tagClass: "tag-nstp" }
+      ],
+      "sunday": [
+        { subject: "No Classes Scheduled", time: "Rest Day!", room: "N/A", instructor: "", tag: "Weekend", tagClass: "no-class" }
+      ]
+    };
+
+    const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+    // Function to render the expanded (details) view
+    function renderExpandedView() {
+      const container = document.getElementById('expanded-view-container');
+      container.innerHTML = ''; // Clear previous content
+
+      for (const dayId of daysOfWeek) {
+        const dayClasses = scheduleData[dayId];
+        const detailsElement = document.createElement('details');
+        detailsElement.classList.add('day');
+        detailsElement.id = dayId;
+
+        const summaryElement = document.createElement('summary');
+        summaryElement.textContent = dayId.charAt(0).toUpperCase() + dayId.slice(1);
+        detailsElement.appendChild(summaryElement);
+
+        const scheduleContentDiv = document.createElement('div');
+        scheduleContentDiv.classList.add('schedule-content');
+        const innerDiv = document.createElement('div'); // Wrapper for overflow hidden
+
+        dayClasses.forEach(classInfo => {
+          const classDiv = document.createElement('div');
+          classDiv.classList.add('class');
+          if (classInfo.tagClass === 'no-class') {
+            classDiv.classList.add('no-class');
+          }
+          classDiv.setAttribute('data-details', classInfo.instructor);
+
+          classDiv.innerHTML = `
+            <div>
+              <span class="subject">${classInfo.subject}</span>
+              <span class="time">${classInfo.time}</span>
+              <span class="room">${classInfo.room}</span>
+              <span class="instructor">Instructor: ${classInfo.instructor || 'N/A'}</span>
+            </div>
+            <span class="tag ${classInfo.tagClass}">${classInfo.tag}</span>
+          `;
+          innerDiv.appendChild(classDiv);
+        });
+
+        scheduleContentDiv.appendChild(innerDiv);
+        detailsElement.appendChild(scheduleContentDiv);
+        container.appendChild(detailsElement);
+      }
+
+      // Re-attach event listeners for newly created elements
+      attachExpandedViewListeners();
+    }
+
+    function attachExpandedViewListeners() {
+        document.querySelectorAll('.class').forEach(classBlock => {
+            classBlock.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (!classBlock.classList.contains('no-class')) {
+                    classBlock.classList.toggle('expanded');
+                }
+            });
+        });
+
+        // Close other open details when one is opened
+        document.querySelectorAll('details.day').forEach(dayDetails => {
+            dayDetails.addEventListener('toggle', (event) => {
+                if (dayDetails.open) {
+                    document.querySelectorAll('details.day').forEach(otherDayDetails => {
+                        if (otherDayDetails !== dayDetails && otherDayDetails.open) {
+                            otherDayDetails.removeAttribute('open');
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    // Function to render the compact (table) view
+    function renderCompactView() {
+      const compactContainer = document.getElementById('compact-view-container');
+      compactContainer.innerHTML = ''; // Clear previous content
+
+      const table = document.createElement('table');
+      table.classList.add('compact-table');
+
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th>Day</th>
+          <th>Subject</th>
+          <th>Time</th>
+          <th>Room</th>
+          <th>Instructor</th>
+          <th>Type</th>
+        </tr>
+      `;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      for (const dayId of daysOfWeek) {
+        const dayClasses = scheduleData[dayId];
+        let isFirstClassOfDay = true;
+
+        dayClasses.forEach(classInfo => {
+          const tr = document.createElement('tr');
+          if (classInfo.tagClass === 'no-class') {
+              tr.classList.add('no-class-row');
+          }
+
+          if (isFirstClassOfDay) {
+            tr.classList.add('first-class-of-day'); // Add this class for border
+            const tdDay = document.createElement('td');
+            tdDay.rowSpan = dayClasses.length; // Span rows for the day
+            tdDay.classList.add('table-day');
+            tdDay.textContent = dayId.charAt(0).toUpperCase() + dayId.slice(1);
+            tr.appendChild(tdDay);
+            isFirstClassOfDay = false;
+          }
+
+          const tdSubject = document.createElement('td');
+          tdSubject.classList.add('table-subject');
+          tdSubject.textContent = classInfo.subject;
+          tr.appendChild(tdSubject);
+
+          const tdTime = document.createElement('td');
+          tdTime.classList.add('table-time');
+          tdTime.textContent = classInfo.time;
+          tr.appendChild(tdTime);
+
+          const tdRoom = document.createElement('td');
+          tdRoom.classList.add('table-room');
+          tdRoom.textContent = classInfo.room;
+          tr.appendChild(tdRoom);
+
+          const tdInstructor = document.createElement('td');
+          tdInstructor.classList.add('table-instructor');
+          tdInstructor.textContent = classInfo.instructor || 'N/A';
+          tr.appendChild(tdInstructor);
+
+          const tdTag = document.createElement('td');
+          const tagSpan = document.createElement('span');
+          tagSpan.classList.add('table-tag', classInfo.tagClass);
+          tagSpan.textContent = classInfo.tag;
+          tdTag.appendChild(tagSpan);
+          tr.appendChild(tdTag);
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      table.appendChild(tbody);
+      compactContainer.appendChild(table);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const layoutToggleButton = document.getElementById('layoutToggle');
+      const expandedViewContainer = document.getElementById('expanded-view-container');
+      const compactViewContainer = document.getElementById('compact-view-container');
+      let isCompactView = false; // Initial state: expanded view (one day per row)
+
+      // Render the initial expanded view
+      renderExpandedView();
+      renderCompactView(); // Render once to have it ready, hidden
+
+      // Set current day and open it
+      const today = new Date();
+      const currentDayIndex = today.getDay();
+      const currentDayId = daysOfWeek[currentDayIndex];
+      const currentDayElement = document.getElementById(currentDayId);
+
+      if (currentDayElement) {
+        currentDayElement.classList.add('current-day');
+        currentDayElement.setAttribute('open', ''); // Open the current day's details
+
+        // Add an anchor target for the "Go to Current Day" button
+        const anchor = document.createElement('a');
+        anchor.id = 'current-day-anchor';
+        anchor.style.visibility = 'hidden';
+        anchor.style.position = 'absolute';
+        anchor.style.top = '0';
+        currentDayElement.prepend(anchor);
+      }
+
+      // Scroll progress bar
+      const progressBar = document.getElementById('progressBar');
+      window.addEventListener('scroll', () => {
+        const totalHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (window.scrollY / totalHeight) * 100;
+        progressBar.style.width = scrolled + '%';
+      });
+
+      // Fixed navigation bar scroll behavior
+      const scrollToTopLink = document.querySelector('.fixed-nav-bar.top .nav-content');
+      const goToTodayLink = document.querySelector('.fixed-nav-bar.bottom .nav-content:first-of-type');
+
+      scrollToTopLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      goToTodayLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currentDayAnchor = document.getElementById('current-day-anchor');
+        if (currentDayAnchor) {
+          const barHeightDesktop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-height-desktop'));
+          const logoProtrusionDesktop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--logo-protrusion-desktop'));
+          const barHeightMobile = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-height-mobile'));
+          const logoProtrusionMobile = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--logo-protrusion-mobile'));
+
+          const isMobile = window.matchMedia("(max-width: 768px)").matches;
+          const barHeight = isMobile ? barHeightMobile : barHeightDesktop;
+          const logoProtrusion = isMobile ? logoProtrusionMobile : logoProtrusionDesktop;
+
+          const disclaimerHeight = document.querySelector('details.disclaimer').offsetHeight;
+          const hrHeight = document.querySelector('hr').offsetHeight + parseFloat(getComputedStyle(document.querySelector('hr')).getPropertyValue('margin-top')) + parseFloat(getComputedStyle(document.querySelector('hr')).getPropertyValue('margin-bottom'));
+          const h1Height = document.querySelector('h1').offsetHeight + parseFloat(getComputedStyle(document.querySelector('h1')).getPropertyValue('margin-bottom'));
+
+          let headerOffset = barHeight + logoProtrusion + 10 + 6; // Initial padding + top bar + progress bar height
+          headerOffset += disclaimerHeight + hrHeight + h1Height;
+
+          const elementPosition = currentDayAnchor.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+
+      // Layout Toggle Logic
+      layoutToggleButton.addEventListener('click', () => {
+        isCompactView = !isCompactView;
+        document.body.classList.toggle('compact-view', isCompactView);
+
+        if (isCompactView) {
+          // Switch to Compact (Table) View
+          layoutToggleButton.querySelector('.button-text').textContent = 'Expanded View';
+          layoutToggleButton.querySelector('svg').innerHTML = '<path d="M4 11h8V4H4v7zm0 9h8v-7H4v7zm9 0h7v-7h-7v7zm0-16v7h7V4h-7z"/>'; // Grid icon
+          expandedViewContainer.style.display = 'none'; // Hide the expanded view
+          expandedViewContainer.style.opacity = '0';
+          compactViewContainer.style.display = 'block'; // Show the compact table view
+          setTimeout(() => compactViewContainer.style.opacity = '1', 10); // Fade in
+        } else {
+          // Switch back to Expanded (Details) View
+          layoutToggleButton.querySelector('.button-text').textContent = 'Compact View';
+          layoutToggleButton.querySelector('svg').innerHTML = '<path d="M2 13h20v-2H2v2zm0 4h20v-2H2v2zm0-8h20V7H2v2zm0-4h20V3H2v2z"/>'; // List icon
+          compactViewContainer.style.display = 'none'; // Hide the compact table view
+          compactViewContainer.style.opacity = '0';
+          expandedViewContainer.style.display = 'grid'; // Show the expanded view (use 'grid' as it's a grid container)
+          setTimeout(() => expandedViewContainer.style.opacity = '1', 10); // Fade in
+
+          // Ensure all details are closed except the current day when switching back to expanded view
+          document.querySelectorAll('details.day').forEach(day => {
+            if (day.id !== currentDayId) { // Only close if it's not the current day
+              day.removeAttribute('open');
+            } else {
+              day.setAttribute('open', ''); // Ensure current day stays open
+            }
+          });
+          // Re-highlight the current day if it exists and was previously marked
+          if (currentDayElement) {
+              currentDayElement.classList.add('current-day');
+          }
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top when switching views
+      });
+    });
+  </script>
+</body>
+</html>
