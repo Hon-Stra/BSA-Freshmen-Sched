@@ -1,14 +1,19 @@
-const CACHE_NAME = 'umak-schedule-cache-v5'; // <--- IMPORTANT: Increment the version number!
+const CACHE_NAME = 'umak-schedule-cache-v7'; // *** IMPORTANT: Increment the version number again! ***
 const urlsToCache = [
-    '/', // Caches the root URL (your index.html)
+    // Use the explicit root path if '/' gives a 404, or try just '/'
+    // If your index.html is directly at the root of the GitHub Pages subpath, '/' should work.
+    // If not, explicitly list the full path including your repo name like '/BSA-Freshmen-Sched/index.html'
+    // Let's assume '/' works for the main index.html file.
+    '/', // Caches the root URL, which serves index.html
     'index.html',
     'sw.js',
-    'manifest.json',
-    'icon.png', // <--- Verify this file exists and is named exactly 'icon.png'
-    'umak-logo-top.png', // <--- Your top logo image
-    'umak-logo-bottom.png', // <--- Your bottom logo image
-    'site_background.webp'
-    // Add any other specific asset paths here if you add more files (e.g., external fonts, separate CSS files if you move them out of index.html)
+    'manifest.json', // Ensure this file exists in your root directory
+    'icon.png', // Ensure this file exists and is named exactly 'icon.png'
+    'umak-logo-top.png', // Your top logo image
+    'umak-logo-bottom.png', // Your bottom logo image
+    'site_background.png', // <--- *** CORRECTED: Changed from .webp to .png ***
+    // Add any other specific asset URLs here if you add more files (e.g., external fonts, separate CSS files later).
+    // Make sure every file your app needs to run offline is listed.
 ];
 
 // Install event: Fires when the Service Worker is first installed. Caches all listed assets.
@@ -18,12 +23,15 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[Service Worker] Cache opened:', CACHE_NAME);
-                return cache.addAll(urlsToCache); // Attempt to cache all specified URLs
+                // The Promise.all with individual fetches below is a more robust way
+                // to identify *which* file is failing, as addAll is "all or nothing."
+                // For now, let's stick to addAll as the primary fix is the filename.
+                return cache.addAll(urlsToCache);
             })
             .catch((error) => {
-                // This will now log the specific error that 'addAll' encountered
                 console.error('[Service Worker] Failed to cache during install:', error);
-                // You might want to throw the error to prevent activation if caching fails badly
+                // Throwing the error prevents the SW from activating if caching fails,
+                // which prevents a broken offline experience.
                 throw error;
             })
     );
@@ -42,10 +50,6 @@ self.addEventListener('fetch', (event) => {
                 // No cache hit - try fetching from the network
                 console.log('[Service Worker] Fetching from network:', event.request.url);
                 return fetch(event.request).catch(() => {
-                    // This catch block handles network failures (e.g., truly offline)
-                    // If the main page isn't in cache, and offline, this will lead to the browser's default offline page.
-                    // You can serve a custom offline page here if desired.
-                    // For example, return caches.match('/offline.html'); if you have one.
                     console.error('[Service Worker] Fetch failed, network unavailable for:', event.request.url);
                 });
             })
