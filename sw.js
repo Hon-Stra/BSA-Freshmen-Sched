@@ -1,19 +1,17 @@
-const CACHE_NAME = 'umak-schedule-cache-v7'; // *** IMPORTANT: Increment the version number again! ***
+const CACHE_NAME = 'umak-schedule-cache-v8'; // *** IMPORTANT: Increment the version number again to force update! ***
 const urlsToCache = [
-    // Use the explicit root path if '/' gives a 404, or try just '/'
-    // If your index.html is directly at the root of the GitHub Pages subpath, '/' should work.
-    // If not, explicitly list the full path including your repo name like '/BSA-Freshmen-Sched/index.html'
-    // Let's assume '/' works for the main index.html file.
-    '/', // Caches the root URL, which serves index.html
-    'index.html',
-    'sw.js',
-    'manifest.json', // Ensure this file exists in your root directory
-    'icon.png', // Ensure this file exists and is named exactly 'icon.png'
-    'umak-logo-top.png', // Your top logo image
-    'umak-logo-bottom.png', // Your bottom logo image
-    'site_background.png', // <--- *** CORRECTED: Changed from .webp to .png ***
-    // Add any other specific asset URLs here if you add more files (e.g., external fonts, separate CSS files later).
-    // Make sure every file your app needs to run offline is listed.
+    // Explicitly include the repository subpath for all assets.
+    '/BSA-Freshmen-Sched/', // The root of your application on GitHub Pages
+    '/BSA-Freshmen-Sched/index.html',
+    '/BSA-Freshmen-Sched/sw.js',
+    '/BSA-Freshmen-Sched/manifest.json', // Ensure this file exists in your repo root
+    '/BSA-Freshmen-Sched/icon.png', // Your app's icon
+    '/BSA-Freshmen-Sched/umak-logo-top.png', // Your top logo image
+    '/BSA-Freshmen-Sched/umak-logo-bottom.png', // Your bottom logo image
+    '/BSA-Freshmen-Sched/site_background.png', // Your site background image (confirmed as .png)
+    // Add any other specific asset URLs here if you add more files
+    // (e.g., external fonts, separate CSS files, other images).
+    // Make sure every file your app needs to run offline is listed with its full relative path.
 ];
 
 // Install event: Fires when the Service Worker is first installed. Caches all listed assets.
@@ -23,15 +21,11 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[Service Worker] Cache opened:', CACHE_NAME);
-                // The Promise.all with individual fetches below is a more robust way
-                // to identify *which* file is failing, as addAll is "all or nothing."
-                // For now, let's stick to addAll as the primary fix is the filename.
-                return cache.addAll(urlsToCache);
+                return cache.addAll(urlsToCache); // Attempt to cache all specified URLs
             })
             .catch((error) => {
+                // Log the specific error and re-throw to prevent activation of a broken SW
                 console.error('[Service Worker] Failed to cache during install:', error);
-                // Throwing the error prevents the SW from activating if caching fails,
-                // which prevents a broken offline experience.
                 throw error;
             })
     );
@@ -50,7 +44,10 @@ self.addEventListener('fetch', (event) => {
                 // No cache hit - try fetching from the network
                 console.log('[Service Worker] Fetching from network:', event.request.url);
                 return fetch(event.request).catch(() => {
+                    // This catch block handles network failures (e.g., truly offline)
                     console.error('[Service Worker] Fetch failed, network unavailable for:', event.request.url);
+                    // If the primary request fails offline, you could serve a custom offline page
+                    // return caches.match('/BSA-Freshmen-Sched/offline.html'); // Example: requires an offline.html to be cached
                 });
             })
     );
