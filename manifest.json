@@ -1,7 +1,7 @@
 {
-  "name": "UMak Mobile Schedule",
-  "short_name": "UMak Schedule",
-  "start_url": "index.html",
+  "name": "BSA Mobile Schedule",
+  "short_name": "BSA Schedule",
+  "start_url": "/BSA-Freshmen-Sched/",  // <-- CRITICAL CHANGE: Point to the root of your app
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4a90e2",
