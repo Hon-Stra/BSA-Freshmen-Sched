@@ -7,6 +7,7 @@ const urlsToCache = [
     'icon.png', // <--- Verify this file exists and is named exactly 'icon.png'
     'umak-logo-top.png', // <--- Your top logo image
     'umak-logo-bottom.png', // <--- Your bottom logo image
+    'site_background.webp'
     // Add any other specific asset paths here if you add more files (e.g., external fonts, separate CSS files if you move them out of index.html)
 ];
 
