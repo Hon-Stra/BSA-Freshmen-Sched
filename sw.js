@@ -1,47 +1,55 @@
-const CACHE_NAME = 'chedule-cache-v2'; // Still increment this!
+const CACHE_NAME = 'umak-schedule-cache-v1';
 const urlsToCache = [
-  '/',
-  'index.html',
-  'manifest.json',
-  'icon.png',
+    '/', // Important: cache the root path (your index.html)
+    'index.html',
+    'style.css', // If you move styles to a separate file
+    'sw.js',
+    'manifest.json',
+    'icon.png', // Or whatever your favicon/app icon is
+    'umak-logo-top.png',
+    'umak-logo-bottom.png',
+    'site_background.webp', // Make sure this is listed!
+    // Add any other CSS, JS, or image files used
 ];
 
+// Install event: cache files
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Forces the new service worker to activate immediately
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache during install');
-        return cache.addAll(urlsToCache);
-      })
-  );
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then((cache) => {
+                console.log('Opened cache');
+                return cache.addAll(urlsToCache);
+            })
+    );
 });
 
+// Fetch event: serve from cache if available, otherwise fetch from network
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
-  );
+    event.respondWith(
+        caches.match(event.request)
+            .then((response) => {
+                // Cache hit - return response
+                if (response) {
+                    return response;
+                }
+                // No cache hit - fetch from network
+                return fetch(event.request);
+            })
+    );
 });
 
+// Activate event: clean up old caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+    const cacheWhitelist = [CACHE_NAME];
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
         })
-      );
-    }).then(() => {
-      return self.clients.claim(); // Takes control of any clients not yet controlled by this service worker
-    })
-  );
+    );
 });
