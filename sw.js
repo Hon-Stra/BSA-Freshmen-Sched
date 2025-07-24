@@ -1,51 +1,66 @@
-const CACHE_NAME = 'umak-schedule-cache-v1';
+const CACHE_NAME = 'umak-schedule-cache-v1'; // Increment this version number when you update files
 const urlsToCache = [
-    '/', // Important: cache the root path (your index.html)
+    '/', // Essential: caches the root URL, which often serves index.html
     'index.html',
-    'style.css', // If you move styles to a separate file
+    // Your CSS is inline in index.html, so you don't need a separate 'style.css' entry.
+    // If you later extract your CSS into a separate file, add it here.
     'sw.js',
     'manifest.json',
-    'icon.png', // Or whatever your favicon/app icon is
-    'umak-logo-top.png',
-    'umak-logo-bottom.png',
-    'site_background.webp', // Make sure this is listed!
-    // Add any other CSS, JS, or image files used
+    'icon.png', // Assuming you have a favicon/app icon named icon.png
+    'umak-logo-top.png', // Your top logo image
+    'umak-logo-bottom.png', // Your bottom logo image
+    'site_background.webp', // Your background image
+    // Add any other image files, external fonts, or JavaScript files your app uses
 ];
 
-// Install event: cache files
+// Install event: Fires when the Service Worker is first installed. Caches all listed assets.
 self.addEventListener('install', (event) => {
+    console.log('[Service Worker] Install Event: Caching assets...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
+                console.log('[Service Worker] Cache opened:', CACHE_NAME);
+                return cache.addAll(urlsToCache); // Attempt to cache all specified URLs
+            })
+            .catch((error) => {
+                console.error('[Service Worker] Failed to cache during install:', error);
             })
     );
 });
 
-// Fetch event: serve from cache if available, otherwise fetch from network
+// Fetch event: Intercepts network requests. Serves from cache if available, otherwise from network.
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
-                // Cache hit - return response
+                // Cache hit - return the cached response
                 if (response) {
+                    console.log('[Service Worker] Serving from cache:', event.request.url);
                     return response;
                 }
-                // No cache hit - fetch from network
-                return fetch(event.request);
+                // No cache hit - try fetching from the network
+                console.log('[Service Worker] Fetching from network:', event.request.url);
+                return fetch(event.request).catch(() => {
+                    // This catch block handles network failures (e.g., truly offline)
+                    // If the main page isn't in cache, and offline, this will lead to the browser's default offline page.
+                    // You can serve a custom offline page here if desired.
+                    // return caches.match('/offline.html'); // Example for a custom offline page
+                    console.error('[Service Worker] Fetch failed, network unavailable for:', event.request.url);
+                });
             })
     );
 });
 
-// Activate event: clean up old caches
+// Activate event: Cleans up old caches to save space and prevent stale content.
 self.addEventListener('activate', (event) => {
+    console.log('[Service Worker] Activate Event: Cleaning old caches...');
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        console.log('[Service Worker] Deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
