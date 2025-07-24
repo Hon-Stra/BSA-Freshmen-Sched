@@ -1,4 +1,4 @@
-const CACHE_NAME = 'umak-schedule-cache-v8'; // *** IMPORTANT: Increment the version number again to force update! ***
+const CACHE_NAME = 'umak-schedule-cache-v9'; // *** IMPORTANT: Increment the version number again to force update! ***
 const urlsToCache = [
     // Explicitly include the repository subpath for all assets.
     '/BSA-Freshmen-Sched/', // The root of your application on GitHub Pages
