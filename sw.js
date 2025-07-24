@@ -1,4 +1,4 @@
-const CACHE_NAME = 'umak-schedule-cache-v2'; // <--- IMPORTANT: Increment the version number!
+const CACHE_NAME = 'umak-schedule-cache-v4'; // <--- IMPORTANT: Increment the version number!
 const urlsToCache = [
     '/', // Caches the root URL (your index.html)
     'index.html',
