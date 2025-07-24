@@ -1,16 +1,13 @@
-const CACHE_NAME = 'umak-schedule-cache-v1'; // Increment this version number when you update files
+const CACHE_NAME = 'umak-schedule-cache-v2'; // <--- IMPORTANT: Increment the version number!
 const urlsToCache = [
-    '/', // Essential: caches the root URL, which often serves index.html
+    '/', // Caches the root URL (your index.html)
     'index.html',
-    // Your CSS is inline in index.html, so you don't need a separate 'style.css' entry.
-    // If you later extract your CSS into a separate file, add it here.
     'sw.js',
     'manifest.json',
-    'icon.png', // Assuming you have a favicon/app icon named icon.png
-    'umak-logo-top.png', // Your top logo image
-    'umak-logo-bottom.png', // Your bottom logo image
-    'site_background.webp', // Your background image
-    // Add any other image files, external fonts, or JavaScript files your app uses
+    'icon.png', // <--- Verify this file exists and is named exactly 'icon.png'
+    'umak-logo-top.png', // <--- Your top logo image
+    'umak-logo-bottom.png', // <--- Your bottom logo image
+    // Add any other specific asset paths here if you add more files (e.g., external fonts, separate CSS files if you move them out of index.html)
 ];
 
 // Install event: Fires when the Service Worker is first installed. Caches all listed assets.
@@ -23,7 +20,10 @@ self.addEventListener('install', (event) => {
                 return cache.addAll(urlsToCache); // Attempt to cache all specified URLs
             })
             .catch((error) => {
+                // This will now log the specific error that 'addAll' encountered
                 console.error('[Service Worker] Failed to cache during install:', error);
+                // You might want to throw the error to prevent activation if caching fails badly
+                throw error;
             })
     );
 });
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
                     // This catch block handles network failures (e.g., truly offline)
                     // If the main page isn't in cache, and offline, this will lead to the browser's default offline page.
                     // You can serve a custom offline page here if desired.
-                    // return caches.match('/offline.html'); // Example for a custom offline page
+                    // For example, return caches.match('/offline.html'); if you have one.
                     console.error('[Service Worker] Fetch failed, network unavailable for:', event.request.url);
                 });
             })
